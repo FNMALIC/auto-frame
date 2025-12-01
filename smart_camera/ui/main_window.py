@@ -4,11 +4,15 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import cv2
 import numpy as np
+import time
 from PIL import Image, ImageTk
 from typing import Optional
 
 from ..core.controller import CameraController
 from ..core.tracking_state import TrackingStatus
+from ..core.logger import get_logger
+
+logger = get_logger('ui')
 
 
 class SmartCameraUI:
@@ -33,6 +37,10 @@ class SmartCameraUI:
         
         # Update flag
         self.updating = False
+        
+        # Recording state
+        self.is_recording = False
+        self.recording_start_time = 0.0
         
         self._create_widgets()
     
@@ -88,9 +96,28 @@ class SmartCameraUI:
         )
         self.stop_button.pack(side=tk.LEFT, padx=5)
         
+        self.record_button = ttk.Button(
+            button_frame,
+            text="Start Recording",
+            command=self._on_record_toggle,
+            width=15,
+            state=tk.DISABLED
+        )
+        self.record_button.pack(side=tk.LEFT, padx=5)
+        
         # FPS display
         self.fps_label = ttk.Label(main_frame, text="FPS: 0.0")
         self.fps_label.grid(row=4, column=0, columnspan=3, pady=5)
+        
+        # Recording status
+        recording_frame = ttk.Frame(main_frame)
+        recording_frame.grid(row=5, column=0, columnspan=3, pady=5)
+        
+        self.recording_indicator = ttk.Label(recording_frame, text="", foreground="red")
+        self.recording_indicator.pack(side=tk.LEFT, padx=5)
+        
+        self.recording_label = ttk.Label(recording_frame, text="")
+        self.recording_label.pack(side=tk.LEFT)
         
         # Settings panel
         self._create_settings_panel(main_frame)
@@ -98,7 +125,7 @@ class SmartCameraUI:
     def _create_settings_panel(self, parent: ttk.Frame) -> None:
         """Create settings panel"""
         settings_frame = ttk.LabelFrame(parent, text="Settings", padding="10")
-        settings_frame.grid(row=5, column=0, columnspan=3, pady=10, sticky=(tk.W, tk.E))
+        settings_frame.grid(row=6, column=0, columnspan=3, pady=10, sticky=(tk.W, tk.E))
         
         # Tracking speed
         ttk.Label(settings_frame, text="Tracking Speed:").grid(row=0, column=0, sticky=tk.W, pady=5)
@@ -138,6 +165,9 @@ class SmartCameraUI:
         size_frame = ttk.Frame(settings_frame)
         size_frame.grid(row=2, column=1, columnspan=2, sticky=(tk.W, tk.E), pady=5)
         
+        # Create label first before slider to avoid AttributeError
+        self.size_label = ttk.Label(size_frame, text=f"{int(self.controller.config.face_size_ratio * 100)}%")
+        
         self.size_slider = ttk.Scale(
             size_frame,
             from_=0.3,
@@ -145,11 +175,12 @@ class SmartCameraUI:
             orient=tk.HORIZONTAL,
             command=self._on_size_change
         )
-        self.size_slider.set(self.controller.config.face_size_ratio)
+        # Pack slider first, then label
         self.size_slider.pack(side=tk.LEFT, fill=tk.X, expand=True)
-        
-        self.size_label = ttk.Label(size_frame, text=f"{int(self.controller.config.face_size_ratio * 100)}%")
         self.size_label.pack(side=tk.LEFT, padx=5)
+        
+        # Set value after label is created to avoid callback issues
+        self.size_slider.set(self.controller.config.face_size_ratio)
     
     def _on_speed_change(self, value: str) -> None:
         """Handle tracking speed change"""
@@ -181,6 +212,7 @@ class SmartCameraUI:
         if success:
             self.start_button.config(state=tk.DISABLED)
             self.stop_button.config(state=tk.NORMAL)
+            self.record_button.config(state=tk.NORMAL)
             self.set_status("Active", "green")
             self._start_preview_update()
         else:
@@ -189,14 +221,44 @@ class SmartCameraUI:
     
     def _on_stop(self) -> None:
         """Handle stop button click"""
+        # Stop recording if active
+        if self.is_recording:
+            self._on_record_toggle()
+        
         self.controller.stop()
         self.start_button.config(state=tk.NORMAL)
         self.stop_button.config(state=tk.DISABLED)
+        self.record_button.config(state=tk.DISABLED)
         self.set_status("Inactive", "red")
         self.updating = False
         
         # Clear preview
         self.canvas.delete("all")
+    
+    def _on_record_toggle(self) -> None:
+        """Handle record button click"""
+        if not self.is_recording:
+            # Start recording
+            success = self.controller.start_recording()
+            if success:
+                self.is_recording = True
+                self.recording_start_time = time.time()
+                self.record_button.config(text="Stop Recording")
+                self.recording_indicator.config(text="●")
+                logger.info("Recording started from UI")
+            else:
+                self.show_error("Failed to start recording")
+        else:
+            # Stop recording
+            saved_file = self.controller.stop_recording()
+            self.is_recording = False
+            self.record_button.config(text="Start Recording")
+            self.recording_indicator.config(text="")
+            self.recording_label.config(text="")
+            
+            if saved_file:
+                messagebox.showinfo("Recording Saved", f"Recording saved to:\n{saved_file}")
+                logger.info(f"Recording stopped from UI: {saved_file}")
     
     def _start_preview_update(self) -> None:
         """Start preview update loop"""
@@ -235,6 +297,14 @@ class SmartCameraUI:
             
             # Update FPS
             self.fps_label.config(text=f"FPS: {status.current_fps:.1f}")
+            
+            # Update recording status
+            if self.is_recording:
+                import time
+                duration = time.time() - self.recording_start_time
+                minutes = int(duration // 60)
+                seconds = int(duration % 60)
+                self.recording_label.config(text=f"Recording: {minutes:02d}:{seconds:02d}")
         
         # Schedule next update (30fps = ~33ms)
         if self.updating:

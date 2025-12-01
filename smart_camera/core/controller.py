@@ -11,6 +11,7 @@ from .face_detector import FaceDetector
 from .tracking_state import TrackingState, TrackingStatus
 from .frame_processor import FrameProcessor, ProcessorConfig
 from .virtual_camera import VirtualCamera
+from .video_recorder import VideoRecorder
 from .logger import get_logger
 from ..config.settings import AppConfig
 
@@ -26,6 +27,9 @@ class ControllerStatus:
     tracking_status: TrackingStatus
     current_zoom: float
     error_message: Optional[str]
+    is_recording: bool = False
+    recording_duration: float = 0.0
+    recording_file: Optional[str] = None
 
 
 class CameraController:
@@ -46,6 +50,7 @@ class CameraController:
         self.tracking_state: Optional[TrackingState] = None
         self.frame_processor: Optional[FrameProcessor] = None
         self.virtual_camera: Optional[VirtualCamera] = None
+        self.video_recorder: Optional[VideoRecorder] = None
         
         # Threading
         self.processing_thread: Optional[threading.Thread] = None
@@ -119,6 +124,21 @@ class CameraController:
                 logger.error(self.error_message)
                 return False
             
+            # Initialize video recorder
+            from pathlib import Path
+            if self.config.recording_output_dir:
+                recording_dir = self.config.recording_output_dir
+            else:
+                # Use default directory
+                home = Path.home()
+                recording_dir = str(home / ".smart_meeting_camera" / "recordings")
+            
+            self.video_recorder = VideoRecorder(
+                output_dir=recording_dir,
+                codec=self.config.recording_codec,
+                fps=self.config.fps
+            )
+            
             # Start processing thread
             self.running = True
             self.fps_start_time = time.time()
@@ -150,6 +170,10 @@ class CameraController:
         if self.virtual_camera is not None:
             self.virtual_camera.close()
             self.virtual_camera = None
+        
+        if self.video_recorder is not None:
+            self.video_recorder.close()
+            self.video_recorder = None
         
         if self.face_detector is not None:
             self.face_detector.close()
@@ -203,6 +227,10 @@ class CameraController:
                 
                 # Send to virtual camera
                 self.virtual_camera.send_frame(processed_frame)
+                
+                # Write to video recorder if recording
+                if self.video_recorder is not None and self.video_recorder.is_recording:
+                    self.video_recorder.write_frame(processed_frame)
                 
                 # Send to UI preview (non-blocking)
                 try:
@@ -281,6 +309,49 @@ class CameraController:
             # Would need to recreate detector for this
             pass
     
+    def start_recording(self) -> bool:
+        """
+        Start recording video
+        
+        Returns:
+            True if recording started successfully
+        """
+        if not self.running:
+            logger.warning("Cannot start recording: camera not running")
+            return False
+        
+        if self.video_recorder is None:
+            logger.error("Video recorder not initialized")
+            return False
+        
+        width, height = self.config.resolution
+        success = self.video_recorder.start_recording(width, height)
+        
+        if success:
+            logger.info("Recording started")
+        else:
+            logger.error("Failed to start recording")
+        
+        return success
+    
+    def stop_recording(self) -> Optional[str]:
+        """
+        Stop recording video
+        
+        Returns:
+            Path to saved video file, or None if not recording
+        """
+        if self.video_recorder is None:
+            return None
+        
+        saved_file = self.video_recorder.stop_recording()
+        
+        if saved_file:
+            logger.info(f"Recording saved to: {saved_file}")
+        
+        return saved_file
+    
+    
     def get_status(self) -> ControllerStatus:
         """
         Get current controller status
@@ -295,11 +366,24 @@ class CameraController:
             tracking_status = self.tracking_state.status
             face_detected = tracking_status == TrackingStatus.TRACKING
         
+        # Get recording info
+        is_recording = False
+        recording_duration = 0.0
+        recording_file = None
+        if self.video_recorder is not None:
+            info = self.video_recorder.get_recording_info()
+            is_recording = info['is_recording']
+            recording_duration = info['duration_seconds']
+            recording_file = info['current_file']
+        
         return ControllerStatus(
             is_running=self.running,
             current_fps=self.current_fps,
             face_detected=face_detected,
             tracking_status=tracking_status,
             current_zoom=self.current_zoom,
-            error_message=self.error_message
+            error_message=self.error_message,
+            is_recording=is_recording,
+            recording_duration=recording_duration,
+            recording_file=recording_file
         )

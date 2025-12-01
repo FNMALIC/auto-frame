@@ -26,6 +26,10 @@ class AppConfig:
     # Performance settings
     max_cpu_percent: float = 25.0
     enable_gpu: bool = False
+    
+    # Recording settings
+    recording_output_dir: str = ""  # Empty string means use default (~/.smart_meeting_camera/recordings/)
+    recording_codec: str = "mp4v"   # Video codec for recording
 
 
 class SettingsManager:
