@@ -4,8 +4,7 @@ Auto-framing camera for video calls and content creation using MediaPipe and Ope
 
 ## Features
 
-- 🎯 **Auto-framing**: Automatically tracks and frames your face during video calls
-- 🎥 **Virtual Webcam**: Works with Zoom, Teams, Google Meet, OBS, and more
+- 🎯 **Auto-framing**: Automatically tracks and frames your face
 - 🔄 **Smooth Tracking**: Natural camera movements without jerkiness
 - ⚙️ **Configurable**: Adjust tracking speed, zoom level, and face size
 - 💻 **Lightweight**: Optimized for real-time performance
