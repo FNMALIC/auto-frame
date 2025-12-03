@@ -1,4 +1,4 @@
-# Smart Meeting Camera
+# Autoframming Camera
 
 Auto-framing camera for video calls and content creation using MediaPipe and OpenCV.
 
@@ -63,10 +63,10 @@ python main.py
 
 ### Using with Video Conferencing Apps
 
-1. Start Smart Meeting Camera
+1. Start Autoframing Camera
 2. Click "Start"
 3. Open your video conferencing app (Zoom, Teams, etc.)
-4. Select "Smart Meeting Camera" as your camera device
+4. Select "Autoframing Camera" as your camera device
 5. Join your meeting!
 
 ## Settings
@@ -101,13 +101,13 @@ python main.py
 
 ### Camera not appearing in video apps
 - Restart the video conferencing application
-- On some platforms, you may need to restart Smart Meeting Camera
+- On some platforms, you may need to restart Autoframing Camera
 
 ## Configuration
 
-Settings are automatically saved to `~/.smart_meeting_camera/config.json`
+Settings are automatically saved to `~/.autoframing_camera/config.json`
 
-Logs are saved to `~/.smart_meeting_camera/logs/app.log`
+Logs are saved to `~/.autoframing_camera/logs/app.log`
 
 ## Command Line Options
 

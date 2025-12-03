@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Smart Meeting Camera - Main entry point"""
+"""Autoframming Camera - Main entry point"""
 
 import sys
 import signal
@@ -21,7 +21,7 @@ def main():
     """Main application entry point"""
     # Parse arguments
     parser = argparse.ArgumentParser(
-        description="Smart Meeting Camera - Auto-framing for video calls"
+        description="Autoframming Camera - Auto-framing for video calls"
     )
     parser.add_argument(
         "--debug",

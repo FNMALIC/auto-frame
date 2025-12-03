@@ -1,0 +1,12 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Smart Meeting Camera
+Comment=Auto-framing camera for video calls and content creation
+Exec=smart-camera
+Icon=smart-camera
+Terminal=false
+Categories=AudioVideo;Video;
+Keywords=camera;webcam;video;meeting;zoom;
+StartupNotify=true
+StartupWMClass=smart-camera

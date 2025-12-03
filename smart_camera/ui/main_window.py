@@ -27,7 +27,7 @@ class SmartCameraUI:
         """
         self.controller = controller
         self.root = tk.Tk()
-        self.root.title("Smart Meeting Camera")
+        self.root.title("Autoframming Camera")
         self.root.protocol("WM_DELETE_WINDOW", self._on_closing)
         
         # Preview
@@ -53,7 +53,7 @@ class SmartCameraUI:
         # Title
         title_label = ttk.Label(
             main_frame, 
-            text="Smart Meeting Camera",
+            text="Autoframming Camera",
             font=("Arial", 16, "bold")
         )
         title_label.grid(row=0, column=0, columnspan=3, pady=(0, 10))
